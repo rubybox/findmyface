@@ -1,0 +1,40 @@
+name: findme
+services:
+  app:
+    build: .
+    image: findmyface:latest
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1200m
+    pids_limit: 128
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:?Set APP_BASE_URL in .env}
+      DRIVE_FOLDER_ID: ${DRIVE_FOLDER_ID:?Set DRIVE_FOLDER_ID in .env}
+      PUBLIC_ACCESS: ${PUBLIC_ACCESS:-true}
+      AUTO_INDEX: ${AUTO_INDEX:-true}
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
+      ALLOWED_EMAIL: ${ALLOWED_EMAIL:-owner@example.com}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/service-account.json
+      TOKEN_KEY_FILE: /run/secrets/token_key
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    volumes:
+      - ./secrets:/run/secrets:ro
+      - app_data:/data
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  app_data:

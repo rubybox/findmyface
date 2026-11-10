@@ -1,0 +1,39 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*service-account*.json
+oauth.json
+token_key
+*.pem
+*.key
+*.p12
+*.pfx
+# Runtime data, photos, face embeddings, generated archives
+/data/
+/backups/
+/exports/
+/thumbs/
+*.sqlite*
+*.db
+*.zip
+*.tar
+*.tar.gz
+# Models are downloaded with a pinned checksum
+app/models/*.onnx
+# Python and editors
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+.idea/
+.vscode/
+*.sql
+*.dump
+*.log

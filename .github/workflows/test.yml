@@ -1,0 +1,21 @@
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: "2"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/download_model.py
+      - run: python scripts/check_secrets.py
+      - run: python -m pytest -q

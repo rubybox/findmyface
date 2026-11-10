@@ -1,0 +1,11 @@
+# Use this instead of compose.https.yaml when a Docker reverse proxy already runs.
+services:
+  app:
+    networks:
+      default: {}
+      edge:
+        aliases: [findme-app]
+networks:
+  edge:
+    external: true
+    name: ${EXTERNAL_PROXY_NETWORK:?Set EXTERNAL_PROXY_NETWORK in .env}
