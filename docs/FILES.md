@@ -5,6 +5,7 @@
 | `app/main.py` | สร้าง FastAPI, หน้าหลัก, security headers/CSP, session แบบไม่ล็อกอิน, API config สำหรับ Analytics และเส้นทาง OAuth เดิมสำหรับโหมด optional |
 | `app/library.py` | อ่าน Drive แบบแบ่งหน้าและโฟลเดอร์ย่อย, cache รายการ/ภาพย่อ, ตรวจสิทธิ์และสมาชิกคลัง, สร้าง ZIP/TAR เบื้องหลัง, จำกัดพื้นที่และอายุไฟล์, แยกเจ้าของงาน |
 | `app/matching.py` | งานสร้าง/อัปเดตดัชนี, รายงานความคืบหน้า, รับรูปอ้างอิง, จับคู่และแยกรูปที่ไม่แน่ใจ |
+| `app/arcface.py` | ตรวจใบหน้าด้วย SCRFD 10G จัดแนวใบหน้า และสร้างเวกเตอร์ ArcFace บน ONNX Runtime |
 | `app/matching_core.py` | ตรวจภาพ/EXIF/ขนาด, ตรวจใบหน้าด้วย YuNet, สร้าง embedding ด้วย dlib, เก็บและค้นหาใน SQLite |
 | `app/faces.py` | เตรียม preview ย่อจากต้นฉบับ และระบบตรวจตำแหน่งใบหน้าแบบเดิมในหน้าดูรูป |
 | `app/static/gallery.html` | หน้าอัปโหลด อัลบั้ม ผลค้นหา ตัวเลือกดาวน์โหลด และหน้าดูภาพใหญ่ |
@@ -29,9 +30,11 @@
 | `.dockerignore` | กันความลับและไฟล์ที่ไม่จำเป็นออกจาก Docker build context |
 | `requirements.txt` | dependencies หลักที่ใช้กับแอป |
 | `requirements-drive.txt` | Google Auth และ HTTP client ของ Service Account |
+| `requirements-arcface.txt` | ONNX Runtime สำหรับ SCRFD 10G + ArcFace |
 | `requirements-dev.txt` | dependencies สำหรับทดสอบ |
 | `.github/workflows/test.yml` | GitHub Actions สำหรับติดตั้ง ดาวน์โหลดโมเดล ตรวจ secret patterns และทดสอบ |
 | `README.md` | ภาพรวม ฟังก์ชัน และทางเข้าคู่มือ |
+| `docs/ARCFACE.md` | ตั้งค่าไฟล์โมเดล สร้างดัชนี และสลับกลับไปใช้ YuNet/dlib |
 | `docs/INSTALL.md` | ติดตั้ง ตั้งค่า DNS/HTTPS/Drive อัปเดต สำรองและแก้ปัญหา |
 | `docs/GITHUB.md` | clone, branch, review, commit, push โดยไม่ส่ง secrets |
 | `docs/SECRETS.md` | แยกไฟล์ลับและไฟล์ที่อนุญาตให้อยู่ใน repo |
@@ -55,7 +58,7 @@
 | GET | `/api/library` | รายการรูป |
 | POST | `/api/library/refresh` | อัปเดตรายการรูป |
 | GET/POST | `/api/faces/index` | ดูสถานะ/เริ่มสร้างดัชนี |
-| POST | `/api/faces/search?threshold=0.46` | ส่ง body เป็น bytes ของรูปอ้างอิง |
+| POST | `/api/faces/search` | ส่ง body เป็น bytes ของรูปอ้างอิง และระบุ `?threshold=0.50` ได้ |
 | GET | `/api/photos/{id}/thumbnail` | ภาพย่อ |
 | GET | `/api/photos/{id}/preview` | ภาพตัวอย่างย่อจากต้นฉบับ |
 | GET | `/api/photos/{id}/faces` | ตำแหน่งใบหน้าใน preview |

@@ -10,3 +10,14 @@
 #faceThreshold::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid #245e45}
 #faceThreshold::-webkit-slider-runnable-track{height:12px;border-radius:999px;background:linear-gradient(to right,#103c2e 0%,#428466 45%,#e1eedb 100%)}
 #faceThreshold::-webkit-slider-thumb{margin-top:-5px}
+
+.threshold-endpoints{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.threshold-end{display:flex;gap:4px;color:#285c48}
+.threshold-end-high{color:#5d806e}
+.threshold-photo{
+  box-sizing:border-box;width:14px;height:11px;border:1px solid currentColor;border-radius:2px;
+  background:
+    radial-gradient(circle at 75% 24%,currentColor 1px,transparent 1.5px),
+    linear-gradient(135deg,transparent 50%,currentColor 51%) left bottom / 55% 62% no-repeat,
+    linear-gradient(225deg,transparent 50%,currentColor 51%) right bottom / 75% 57% no-repeat;
+}

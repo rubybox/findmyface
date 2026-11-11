@@ -1,0 +1,2 @@
+# CPU runtime for SCRFD 10G and ArcFace. Install alongside requirements.txt.
+onnxruntime==1.31.1

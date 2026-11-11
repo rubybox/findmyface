@@ -18,7 +18,7 @@ cp .env.example .env
 git switch -c update/photo-search
 # แก้ไฟล์โปรแกรมหรือเอกสาร
 python3 scripts/check_secrets.py
-git add app scripts tests docs README.md Dockerfile compose.yaml compose.https.yaml compose.existing-proxy.yaml Caddyfile .env.example .gitignore .dockerignore requirements.txt requirements-drive.txt requirements-dev.txt .github
+git add app scripts tests docs README.md Dockerfile compose.yaml compose.https.yaml compose.existing-proxy.yaml Caddyfile .env.example .gitignore .dockerignore requirements.txt requirements-drive.txt requirements-arcface.txt requirements-dev.txt .github
 git diff --cached --stat
 git diff --cached
 python3 scripts/check_secrets.py
@@ -33,7 +33,7 @@ git push -u origin update/photo-search
 - ต้องไม่มี `.env`, `secrets/`, Service Account JSON, private key หรือ session key ในรายการ staged
 - ไม่อัปโหลด `data/`, SQLite, face embeddings, รูปผู้ใช้, ZIP/TAR ที่สร้างไว้ หรือ backup
 - ใช้ `.env.example` เป็นตัวอย่างและเว้นค่าจริงไว้ในเครื่อง
-- โมเดล ONNX ไม่ต้อง commit; build/test ดาวน์โหลดจาก upstream โดยตรวจ checksum
+- Docker build และชุดทดสอบดาวน์โหลด YuNet พร้อมตรวจ checksum เก็บไฟล์โมเดล SCRFD และ ArcFace ที่ได้รับอนุญาตไว้ใน `secrets/arcface-models/` บนเซิร์ฟเวอร์
 
 ตรวจรายการ staged ได้ด้วย `git diff --cached --name-only` ตัวตรวจ secret เป็น safeguard สำหรับรูปแบบที่รู้จัก ไม่สามารถแทนการอ่าน diff ได้ทั้งหมด
 

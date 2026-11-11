@@ -1,5 +1,4 @@
 """Persistent face index for the configured Drive library."""
-import io
 import threading
 import time
 import os
@@ -12,8 +11,22 @@ MAX_IMAGE = 30 * 1024**2
 
 
 def install(app, core, root, auth, origin, library, preview):
-    store = Store(core.DATA / ('faces-yunet-' + root + '.sqlite3'))
-    engine = FaceEngine()
+    backend = os.getenv('FACE_BACKEND', 'dlib')
+    if backend == 'arcface':
+        from .arcface import ArcFaceEngine
+        engine = ArcFaceEngine(os.getenv('ARCFACE_MODEL_DIR', '/run/secrets/arcface-models'),
+                               int(os.getenv('FACE_CPU_THREADS', '1')))
+        filename = f'faces-{engine.model_id}-{root}.sqlite3'
+        threshold_min, threshold_max, default_threshold = 0.05, 1.0, 0.50
+    elif backend == 'dlib':
+        engine = FaceEngine()
+        filename = f'faces-yunet-{root}.sqlite3'
+        threshold_min, threshold_max, default_threshold = 0.30, 0.65, 0.46
+    else:
+        raise ValueError('FACE_BACKEND must be dlib or arcface')
+    metric = getattr(engine, 'metric', 'euclidean')
+    threshold_config = {'min': threshold_min, 'max': threshold_max, 'default': default_threshold}
+    store = Store(core.DATA / filename)
     inference = threading.Lock()
     state_lock = threading.Lock()
     worker = ThreadPoolExecutor(max_workers=1)
@@ -67,7 +80,8 @@ def install(app, core, root, auth, origin, library, preview):
         auth(request)
         with state_lock:
             snapshot = dict(state)
-        return {**snapshot, **store.stats()}
+        return {**snapshot, **store.stats(), 'backend': backend, 'metric': metric,
+                'threshold_config': threshold_config}
 
     @app.post('/api/faces/index', status_code=202)
     def start_index(request: Request):
@@ -91,8 +105,8 @@ def install(app, core, root, auth, origin, library, preview):
                 raise HTTPException(413, 'รูปอ้างอิงต้องไม่เกิน 15 MB')
         from starlette.concurrency import run_in_threadpool
         try:
-            threshold = float(request.query_params.get('threshold', '0.46'))
-            if not .3 <= threshold <= .65:
+            threshold = float(request.query_params.get('threshold', str(default_threshold)))
+            if not threshold_min <= threshold <= threshold_max:
                 raise ValueError()
         except ValueError:
             raise HTTPException(422, 'เกณฑ์จับคู่ไม่ถูกต้อง')
@@ -105,11 +119,11 @@ def install(app, core, root, auth, origin, library, preview):
         # Recheck membership against the current configured library before returning matches.
         data = await run_in_threadpool(library, current['sid'])
         allowed = {f['id'] for f in data['files']}
-        candidates = await run_in_threadpool(store.search, faces[0][1], threshold + .1, None, engine.model_id)
+        candidates = await run_in_threadpool(store.search, faces[0][1], threshold + .1, None, engine.model_id, metric)
         candidates = [r for r in candidates if r['file_id'] in allowed]
         matches = [r for r in candidates if r['distance'] <= threshold]
         reviews = [r for r in candidates if r['distance'] > threshold]
-        return {'matches': matches, 'review': reviews if len(matches) > 20 else [],
+        return {'backend': backend, 'metric': metric, 'matches': matches, 'review': reviews if len(matches) > 20 else [],
                 'threshold': threshold, 'review_threshold': threshold + .1,
                 'review_total': len(reviews) if len(matches) > 20 else 0}
 

@@ -35,9 +35,9 @@ def prepare_preview(raw):
         with Image.open(io.BytesIO(raw)) as source:
             if source.width * source.height > 64000000:
                 raise ValueError('Image too large')
-            image = ImageOps.exif_transpose(source)
-            image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
-            image = image.convert('RGB')
+            ImageOps.exif_transpose(source, in_place=True)
+            source.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+            image = source if source.mode == 'RGB' else source.convert('RGB')
             out = io.BytesIO()
             image.save(out, 'JPEG', quality=92)
             return out.getvalue()

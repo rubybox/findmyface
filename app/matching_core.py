@@ -9,25 +9,31 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 
+def read_rgb(data):
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(data)) as raw:
+                if raw.width * raw.height > 64_000_000:
+                    raise ValueError('Image exceeds 64 megapixels')
+                ImageOps.exif_transpose(raw, in_place=True)
+                image = raw if raw.mode == 'RGB' else raw.convert('RGB')
+                width, height = image.size
+                image.thumbnail((1600, 1600))
+                pixels = np.array(image)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError,
+            Image.DecompressionBombWarning) as exc:
+        raise ValueError('Invalid or oversized image') from exc
+    return pixels, width, height
+
+
 class FaceEngine:
     # Change this ID when changing models or preprocessing; old vectors must be rebuilt.
     model_id = 'yunet2023-score085-dlib-resnet-v2'
 
     def extract(self, data: bytes):
         import face_recognition
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('error', Image.DecompressionBombWarning)
-                with Image.open(io.BytesIO(data)) as raw:
-                    if raw.width * raw.height > 64_000_000:
-                        raise ValueError('Image exceeds 64 megapixels')
-                    image = ImageOps.exif_transpose(raw).convert('RGB')
-                    width, height = image.size
-                    image.thumbnail((1600, 1600))
-                    pixels = np.array(image)
-        except (UnidentifiedImageError, OSError, Image.DecompressionBombError,
-                Image.DecompressionBombWarning) as exc:
-            raise ValueError('Invalid or oversized image') from exc
+        pixels, width, height = read_rgb(data)
         import cv2
         detector = getattr(self, '_detector', None)
         if detector is None:
@@ -47,7 +53,7 @@ class FaceEngine:
             if bottom > top and right > left:
                 locations.append((top, right, bottom, left))
         vectors = face_recognition.face_encodings(pixels, locations)
-        sx, sy = width / image.width, height / image.height
+        sx, sy = width / pixels.shape[1], height / pixels.shape[0]
         return [({'top': round(t * sy), 'right': round(r * sx),
                   'bottom': round(b * sy), 'left': round(l * sx)}, vector)
                 for (t, r, b, l), vector in zip(locations, vectors)]
@@ -113,13 +119,18 @@ class Store:
             return {'photos': db.execute('SELECT count(*) FROM photos').fetchone()[0],
                     'faces': db.execute('SELECT count(*) FROM faces').fetchone()[0]}
 
-    def search(self, reference, threshold, limit, model):
+    def search(self, reference, threshold, limit, model, metric="euclidean"):
         matches = {}
         with self.connect() as db:
             rows = db.execute('''SELECT p.id,p.name,p.url,f.box,f.vector FROM faces f
                                  JOIN photos p ON p.id=f.photo_id WHERE p.model=?''', (model,))
             for row in rows:
-                distance = float(np.linalg.norm(np.frombuffer(row['vector'], dtype='<f8') - reference))
+                vector = np.frombuffer(row['vector'], dtype='<f8')
+                if metric == 'cosine':
+                    # ArcFace embeddings are L2-normalized when they are generated.
+                    distance = 1.0 - float(np.clip(np.dot(vector, reference), -1, 1))
+                else:
+                    distance = float(np.linalg.norm(vector - reference))
                 if distance <= threshold:
                     result = matches.setdefault(row['id'], {
                         'file_id': row['id'], 'name': row['name'], 'drive_url': row['url'],

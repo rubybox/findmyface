@@ -122,6 +122,7 @@ $('viewer').addEventListener('keydown',e=>{if(e.key==='ArrowLeft')moveViewer(-1)
 $('referenceInput').onchange=()=>{const f=$('referenceInput').files[0];if(!f||!f.type.startsWith('image/'))return;if(f.size>15*1024**2){notice('รูปอ้างอิงต้องไม่เกิน 15 MB');return;}if(refUrl)URL.revokeObjectURL(refUrl);refUrl=URL.createObjectURL(f);$('referenceImage').src=refUrl;$('referenceImage').hidden=false;$('refHint').hidden=true;$('clearReference').hidden=false;$('faceSearch').disabled=false;resetFaceResults();};
 $('clearReference').onclick=()=>{if(refUrl)URL.revokeObjectURL(refUrl);refUrl=null;$('referenceImage').removeAttribute('src');$('referenceImage').hidden=true;$('refHint').hidden=false;$('clearReference').hidden=true;$('referenceInput').value='';$('faceSearch').disabled=true;resetFaceResults();};
 try{const stored=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(stored))selected=new Set(stored.filter(v=>typeof v==='string'));activeJob=sessionStorage.getItem(jobKey);}catch{}
+let thresholdConfigured = false;
 load();pollIndex();if(activeJob){setBusy(true);pollJob();}
 
 $('detectFaces').onclick=async()=>{
@@ -154,6 +155,11 @@ $('clearFaceSearch').onclick=resetFaceResults;
 $('faceThreshold').oninput=()=>{$('thresholdValue').textContent=Number($('faceThreshold').value).toFixed(2);};
 $('faceSearch').onclick=async()=>{
   const file=$('referenceInput').files[0];if(!file||faceBusy)return;
+  if (!thresholdConfigured) {
+    notice('กำลังโหลดการตั้งค่าค้นหา กรุณาลองอีกครั้ง');
+    await pollIndex();
+    return;
+  }
   faceBusy=true;$('faceSearch').disabled=true;$('referenceInput').disabled=true;$('clearReference').disabled=true;
   notice('กำลังค้นหาใบหน้าในคลัง…');
   try{
@@ -167,6 +173,14 @@ async function pollIndex(){
   clearTimeout(indexTimer);
   try{
     const s=await api('/api/faces/index');
+    if (!thresholdConfigured && s.threshold_config) {
+      const slider = $('faceThreshold');
+      slider.min = s.threshold_config.min;
+      slider.max = s.threshold_config.max;
+      slider.value = s.threshold_config.default;
+      slider.oninput();
+      thresholdConfigured = true;
+    }
     const names={idle:'พร้อมใช้งาน',running:'กำลังอ่านคลังรูป…',completed:'อ่านคลังรูปสำเร็จ',completed_with_errors:'อ่านสำเร็จบางส่วน',failed:'อ่านคลังรูปไม่สำเร็จ'};
     $('faceIndexStatus').textContent=`${names[s.status]||s.status} · ดัชนี ${s.photos} รูป / ${s.faces} ใบหน้า · อ่าน ${s.processed} ข้าม ${s.skipped} ผิดพลาด ${s.failed}${s.total?' จาก '+s.total+' รูป':''}`;
     $('refresh').disabled=s.status==='running';

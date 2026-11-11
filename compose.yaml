@@ -1,7 +1,10 @@
 name: findme
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        FACE_BACKEND: ${FACE_BACKEND:-dlib}
     image: findmyface:latest
     restart: unless-stopped
     read_only: true
@@ -14,6 +17,8 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:?Set APP_BASE_URL in .env}
       DRIVE_FOLDER_ID: ${DRIVE_FOLDER_ID:?Set DRIVE_FOLDER_ID in .env}
       PUBLIC_ACCESS: ${PUBLIC_ACCESS:-true}
+      FACE_BACKEND: ${FACE_BACKEND:-dlib}
+      FACE_CPU_THREADS: ${FACE_CPU_THREADS:-1}
       AUTO_INDEX: ${AUTO_INDEX:-true}
       GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
       ALLOWED_EMAIL: ${ALLOWED_EMAIL:-owner@example.com}

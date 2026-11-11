@@ -22,3 +22,5 @@ tests/
 *.sql
 *.dump
 *.log
+
+*.onnx
